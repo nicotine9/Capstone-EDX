@@ -1,0 +1,589 @@
+---
+title: 'Capstone Project: Billionaires Statistics Analysis'
+author: "Nicolas Ojeda"
+date: "11/29/23"
+output:
+  rmarkdown::pdf_document:
+    keep_tex: true
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    latex_engine: xelatex
+  bookdown::pdf_document2:
+    keep_tex: true
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    latex_engine: lualatex
+documentclass: report
+papersize: a4
+fontsize: 12pt
+links-as-notes: true
+linkcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, cache.lazy = FALSE)
+```
+
+\newpage
+
+# Introduction
+
+The distribution of wealth among billionaires is not just a topic of
+significant interest in economic circles; its a lens through which we
+can view broader economic health, policy effectiveness, and social
+equity. This capstone project delves into the Billionaires Statistics
+Dataset, a comprehensive aggregation of the worlds wealthiest
+individuals, to unravel the complex web of factors contributing to
+wealth accumulation among the ultra-rich.
+
+In this analysis, we employ two key machine learning techniques: linear
+regression and Random Forest. These methods were chosen for their
+robustness and versatility in handling large datasets with multiple
+variables. Linear regression will aid in understanding the linear
+relationships between various factors and billionaire wealth, while
+Random Forest will allow us to explore non-linear patterns and the
+relative importance of different predictors.
+
+The overarching goal of this project is twofold: firstly, to predict and
+quantify the impact of various factors such as industry, philanthropy,
+and geographic distribution on the wealth of billionaires; and secondly,
+to identify key drivers and patterns in wealth accumulation that go
+beyond mere wealth distribution. Through this analytic journey, we aim
+to provide insights that might inform economic policies and contribute
+to discussions on wealth inequality and its broader implications.
+
+\newpage
+
+# Literature Review
+
+This project, which centers on the analysis of billionaire wealth using
+linear regression and Random Forest models, aligns seamlessly with
+recent advancements in predictive analytics and the widespread
+application of machine learning techniques across diverse fields.
+
+In the realm of predictive analysis, a study titled "An Overview of the
+Supervised Machine Learning Algorithms" offers a comprehensive
+comparison between the Generalized Linear Model with Linear Regression
+(LR) and Decision Trees with Random Forest (RF). This research
+underscores the efficacy of both models in handling various types of
+data. While linear regression demonstrated superiority in a specific
+analysis scenario, the study emphasizes the potential of combining LR
+and RF predictions. Such an approach not only yields more accurate
+results but also mitigates the risks associated with overfitting and
+incorrect predictions that may arise when relying solely on individual
+algorithms. These insights into the synergy between linear regression
+and Random Forest models are highly relevant to our project's
+objectives.
+
+Furthermore, the practical application of these models in precision
+agriculture is exemplified in the study titled "Using Linear Regression,
+Random Forests, and Support Vector Machine with Unmanned Aerial Vehicle
+Multispectral Images to Predict Canopy Nitrogen Weight in Corn." This
+research leveraged UAV multispectral imagery to predict canopy nitrogen
+weight in corn fields. The study's findings highlighted the superior
+performance of Random Forests over linear regression, emphasizing the
+model's robustness in handling non-linear data and its ability to
+provide accurate predictions even when dealing with low variance data.
+Notably, the study employed the R programming language and the Random
+Forests algorithm, underscoring the utility of these models in handling
+complex datasets with multiple variables.
+
+Collectively, these studies underscore the versatility and effectiveness
+of linear regression and Random Forest models in predictive analytics.
+Their applications span from software cost estimation to precision
+agriculture, illustrating the broad spectrum of utility across diverse
+domains. In our project, we draw upon these insights to analyze
+billionaire wealth, harnessing the power of both linear regression and
+Random Forest models to uncover patterns and predict influential factors
+in wealth accumulation.
+
+\newpage
+
+# Methodology
+
+Data Collection: The primary data set for this project, the Billionaires
+Statistics Data set, was sourced from
+<https://www.kaggle.com/datasets/nelgiriyewithana/billionaires-statistics-dataset>
+. This data set offers a comprehensive aggregation of financial and
+personal details of the worlds wealthiest individuals, including their
+net worth, sources of wealth, involvement in various industries,
+philanthropic activities, and more. This data set provides a robust
+foundation for analyzing the factors influencing billionaire wealth.
+
+# Data Wrangling
+
+The data set underwent in 2 preprocessing steps to ensure its quality
+and suitability for analysis. These steps included:
+
+Data Cleaning:Identification and imputation of missing values were
+carried out to ensure data completeness. The data was also standardized
+for consistency in formatting, and duplicate entries were removed.
+
+Outlier Detection Outlines: were identified using statistical methods
+and addressed to prevent skewing of the analysis.
+
+\newpage
+
+# Exploratory Data Analysis
+
+# Data Preparation
+
+In this section, we install, and load every packages required for this
+project,
+
+```         
+```
+
+```{r}
+# Load all packages required for the project
+required_packages <- c(
+  "tidyverse",    
+  "lubridate",    
+  "ggplot2",     
+  "dplyr",        
+  "readr",       
+  "caret",        
+  "randomForest",  
+  "rmarkdown", 
+  "stats"
+)
+
+# Install missing packages
+new_packages <- required_packages[!required_packages %in% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+
+# Load all required libraries
+invisible(lapply(required_packages, library, character.only = TRUE))
+
+# Load the dataset (assumes CSV format)
+billionaires <- read.csv("C:/Users/nico0/OneDrive/Documents/billionare/Billionaires Statistics Dataset.csv", stringsAsFactors = FALSE)
+
+# Preliminary data cleaning
+billionaires <- billionaires %>%
+  mutate_if(is.character, trimws) %>%
+  na.omit()
+
+# Summary statistics
+summary(billionaires)
+
+```
+
+# Total Billionaire Wealth by Country
+
+```{r}
+ggplot(billionaires, aes(x = country, y = finalWorth)) +
+  geom_col(fill = "blue", color = "black") +
+  labs(title = "Total Billionaire Wealth by Country", 
+       x = "Country", 
+       y = "Total Wealth (in billions)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+This bar chart shows the sum of wealth for each country. There is a
+significant variance in total wealth between countries. The United
+States stands out with the highest total wealth, which could suggest it
+has either a greater number of billionaires or higher individual wealth
+values, or both. The distribution is highly skewed, with most countries
+having considerably less total wealth compared to the United States.
+
+# Wealth Distribution by Category
+
+```{r}
+ggplot(billionaires, aes(x = category, y = finalWorth)) +
+  geom_boxplot(fill = "lightblue", color = "black") +
+  labs(title = "Wealth Distribution by Category", 
+       x = "Category", 
+       y = "Wealth (in billions)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+This dot plot presents the wealth distribution across different industry
+categories. It seems to be displaying individual data points for wealth
+within each category, which could represent individual billionaires
+wealth in each sector. Some categories like Technology, Finance &
+Investments, and Manufacturing appear to have a wider range of wealth
+values, with some individuals significantly wealthier than others within
+the same category. There may be outliers in several categories that
+could represent particularly successful individuals or industry giants.
+
+### **Distribution of Billionaire Ages**
+
+```{r}
+# Assuming your dataset has a column named 'age'
+hist(billionaires$age, 
+     breaks = 30, 
+     main = "Distribution of Billionaire Ages", 
+     xlab = "Age", 
+     ylab = "Frequency", 
+     col = "lightblue", 
+     border = "black")
+
+```
+
+This histogram displays the frequency distribution of ages among
+billionaires. The x-axis represents different age groups, while the
+y-axis shows the frequency of billionaires within those age groups. The
+distribution appears to be right-skewed, indicating that there are fewer
+young billionaires and a greater number of older billionaires. The
+majority of billionaires fall within the middle age brackets, which
+could suggest that wealth accumulation peaks during these years. The
+skewness towards older ages may reflect the time it takes to build and
+amass significant wealth.
+
+# **Cumulative Wealth by Age**
+
+```{r}
+ggplot(billionaires, aes(x = age, y = finalWorth)) +
+  stat_ecdf(geom = "step", color = "darkblue") +
+  labs(title = "Cumulative Wealth Distribution by Age", 
+       x = "Age", 
+       y = "Cumulative Wealth (in billions)") +
+  theme_minimal()
+
+```
+
+Represents a step graph that shows the cumulative distribution function
+of wealth as it relates to the age of billionaires. The x-axis displays
+the age, while the y-axis shows the cumulative wealth. The graph
+indicates that wealth accumulation increases with age, suggesting that
+the older billionaires tend to have higher wealth accumulation, which
+could be due to more extended periods of wealth generation and
+compounding investments over time.
+
+# **Cumulative Wealth by Age**
+
+```{r}
+ggplot(billionaires, aes(x = finalWorth)) +
+  geom_density(fill = "salmon", color = "darkred", alpha = 0.7) +
+  labs(title = "Density Plot of Billionaires' Wealth", 
+       x = "Wealth (in billions)", 
+       y = "Density") +
+  theme_bw() +
+  xlim(0, quantile(billionaires$finalWorth, 0.99)) # Limiting x to the 99th percentile for better visualization
+
+```
+
+This s a density plot that provides a smoothed representation of the
+distribution of billionaires' wealth. The x-axis represents the wealth
+in billions, and the y-axis represents the density of the probability
+distribution for wealth. The plot shows a peak at the lower end of the
+wealth spectrum, indicating a high density of billionaires with
+relatively lower wealth, and a long tail extending towards the higher
+wealth values, representing the rarity of extremely high wealth. This
+pattern reflects the inequality in wealth distribution, with a large
+number of billionaires having wealth in the lower range of the spectrum
+and a few individuals having significantly higher wealth.
+
+\newpage
+
+# Model Selection
+
+# Linear Regression
+
+What is Linear Regression? Linear Regression is a statistical method
+used to model the relationship between a dependent variable and one or
+more independent variables. In this analysis, it is used to understand
+how various factors, such as age, industry, country, and self-made
+status, linearly correlate with the wealth of billionaires.
+
+# Model Development
+
+# Linear Regression Analysis for Gender Differences
+
+```{r}
+# Splitting the data by gender
+data_male <- filter(billionaires, gender == "M")
+data_female <- filter(billionaires, gender == "F")
+
+# Inspecting all factor variables in the male dataset
+sapply(data_male, function(x) if(is.factor(x)) levels(x))
+
+# Inspecting all factor variables in the female dataset
+sapply(data_female, function(x) if(is.factor(x)) levels(x))
+
+# After checking, adjust your model accordingly
+# Build the linear regression model for the male and female datasets
+# You might need to exclude factor variables with only one level or convert them to numeric/dummy variables
+
+# Example model (adjust based on your findings and the unique values in each subset)
+model_male <- lm(finalWorth ~ age + country + source, data = data_male)
+model_female <- lm(finalWorth ~ age + country + source, data = data_female)
+
+# Summary of the models
+summary(model_male)
+summary(model_female)
+
+```
+
+# Results
+
+# Lineal Regression
+
+```{r}
+
+summary(model_female)
+summary(model_male)
+
+
+```
+
+# Data Description
+
+The dataset used in this analysis consists of individuals' information,
+including their age, country of residence, and the source of their
+wealth. Two separate models were developed, one for males and one for
+females.
+
+#Model Specification The linear regression models were specified as
+follows:
+
+For Males and females
+
+#finalWorth \~ age + country + source
+
+# Results and Interpretation
+
+# Analysis for Females
+
+Coefficients
+
+The intercept (-1725.63) represents the estimated "finalWorth" when all
+predictor variables are zero. The "age" coefficient (42.41) suggests
+that for each additional year of age, "finalWorth" is expected to
+increase by approximately 42.41 units. Several "country" coefficients
+indicate the impact of different countries on "finalWorth."
+Significance: The level of significance for each coefficient varies.
+Notably, "country10" is statistically significant at the 0.05
+significance level.
+
+Residual Standard Error
+
+The residual standard error (8233) measures the spread of errors around
+the regression line. R-squared: The multiple R-squared value (0.0504)
+suggests that only about 5.04% of the variance in "finalWorth" is
+explained by the model.
+
+Adjusted R-squared
+
+The adjusted R-squared is negative (-0.01434), indicating that the model
+may not be an ideal fit for the data. F-statistic and p-value .The
+F-statistic (0.7785) and associated p-value (0.7249) suggest that the
+model may not be statistically significant.
+
+# Analysis for Males
+
+Coefficients
+
+The intercept (676.40) represents the estimated "finalWorth" when all
+predictor variables are zero. The "age" coefficient (38.53) suggests
+that for each additional year of age, "finalWorth" is expected to
+increase by approximately 38.53 units. Various "country" and "source"
+coefficients indicate the impact of different countries and sources on
+"finalWorth." Significance
+
+Some coefficients, such as "country10" and "age," are statistically
+significant at the 0.05 significance level. Residual Standard Error:
+
+The residual standard error (10440) measures the spread of errors around
+the regression line. R-squared
+
+The multiple R-squared value (0.01615) suggests that only about 1.62% of
+the variance in "finalWorth" is explained by the model. Adjusted
+R-squared
+
+The adjusted R-squared (0.006273) remains low, indicating limited model
+fit. F-statistic and p-value
+
+The F-statistic (1.635) and associated p-value (0.03437) indicate some
+level of statistical significance, though the model's explanatory power
+is limited.
+
+# Random Forest
+
+What is Random Forest? Random Forest is an ensemble learning method
+known for its robustness and versatility. It operates by constructing a
+multitude of decision trees during training and outputs the class that
+is the mode of the classes (classification) or mean prediction
+(regression) of the individual trees.
+
+# Random Forest model for predicting wealth of billionaries
+
+```{r}
+
+# Converting categorical variables to factors
+billionaires$country <- as.factor(billionaires$country)
+billionaires$source <- as.factor(billionaires$source)
+billionaires$category <- as.factor(billionaires$category)
+
+# Convert 'age' to numeric if it's not already
+billionaires$age <- as.numeric(billionaires$age)
+
+# Optional: Remove rows with NA values if they exist
+billionaires <- na.omit(billionaires)
+
+# Finding top 10 countries
+top_countries <- names(sort(table(billionaires$country), decreasing = TRUE)[1:10])
+
+# Finding top 10 sources
+top_sources <- names(sort(table(billionaires$source), decreasing = TRUE)[1:10])
+
+# Reducing the number of levels in categorical variables
+# Group countries into fewer categories
+billionaires$country <- as.factor(ifelse(billionaires$country %in% top_countries, billionaires$country, "Other"))
+
+# Repeat similar steps for 'source' if it has more than 53 levels
+# Replace 'top_sources' with a vector of your selected sources
+billionaires$source <- as.factor(ifelse(billionaires$source %in% top_sources, billionaires$source, "Other"))
+
+# Building the Random Forest model
+model_rf <- randomForest(category ~ age + country + source, data = billionaires, ntree = 100)
+
+# Viewing the model summary
+print(model_rf)
+
+
+```
+
+# Results
+
+# Random Forest Model Outcomes
+
+```{r}
+importance(model_rf)
+
+
+
+
+```
+
+# Data Preprocessing 
+
+To prepare the data for modeling, several preprocessing steps were
+undertaken:
+
+Categorical Variables Categorical variables, including "country,"
+"source," and "category," were converted into factors. This conversion
+allows us to use them as predictors in our model effectively.
+
+Numeric Conversion:The "age" variable was converted into a numeric
+format to facilitate modeling.
+
+Handling Missing Data Rows with missing values were removed from the
+dataset to ensure a clean and complete dataset for modeling.
+
+Exploratory Analysis To gain insights into the data, an exploratory
+analysis was conducted: The top 10 countries with the highest number of
+billionaires were identified. Similarly, the top 10 sources of wealth
+were identified.
+
+Feature Engineering To simplify the modeling process and improve model
+generalization, the following feature engineering decisions were made:
+
+Country Grouping: Countries were grouped into fewer categories. The top
+countries were retained, while the rest were labeled as "Other." This
+simplifies the model without losing essential information. Building the
+Random Forest Model The next step involved building the Random Forest
+model:
+
+The Random Forest model was constructed using the "category" variable as
+the target variable and "age," "country," and "source" as predictor
+variables.
+
+A total of 100 trees were used in the Random Forest model.
+
+Model Summary The model summary provides an overview of the Random
+Forest model: It specifies the model type, the number of trees used
+(100), and the number of variables considered at each split in the
+trees.
+
+Additionally, it includes an out-of-bag (OOB) estimate of the error
+rate, which indicates the model's accuracy in predicting wealth
+categories. Model Outcomes The importance of predictor variables in the
+Random Forest model was evaluated using the Mean Decrease in Gini index:
+The Mean Decrease in Gini measures the importance of each variable in
+making accurate predictions. Higher values indicate greater importance
+in the model.
+
+# Conclusion
+
+In this analysis, I leveraged two machine learning models, Random Forest
+and Linear Regression, to delve into the wealth and financial status of
+billionaires. My objective was to uncover insights into the predictive
+power of variables like age, country of residence, and source of wealth.
+
+# Random Forest Model
+
+In developing the Random Forest model, I embarked on a journey to
+predict the wealth category of billionaires. Here are the key takeaways
+from my exploration of the Random Forest model the Random Forest model,
+composed of 100 trees, was meticulously trained to forecast the wealth
+category of billionaires. I relied on critical features such as age,
+country, and source of wealth.
+
+The model's out-of-bag (OOB) estimate of the error rate, standing at
+approximately 60.03%, provided insights into its predictive accuracy. It
+appears that the model may have limited precision when categorizing
+billionaires' wealth based on the chosen features.
+
+To assess the importance of predictor variables within the model, I
+employed the Mean Decrease in Gini index. My analysis unveiled that age,
+country, and source of wealth played pivotal roles in facilitating
+accurate predictions.
+
+For further model enhancement, I acknowledged the necessity of refining
+the model and engaging in strategic feature engineering. Future steps
+may involve exploring alternative machine learning algorithms and
+advanced feature selection techniques to bolster predictive
+capabilities.
+
+# Linear Regression Model
+
+In tandem with the Random Forest model, I embarked on a journey with the
+Linear Regression model to elucidate the intricate relationships between
+age, country, source of wealth, and the financial worth of billionaires.
+Here are my key findings and inferences:
+
+I painstakingly constructed the Linear Regression model to predict the
+financial worth of billionaires (finalWorth) predicated on age, country,
+and source of wealth.
+
+Through the model's coefficients, I shed light on the complex interplay
+between predictor variables and the financial worth of billionaires.
+Notably, age emerged as a significant positive predictor, suggesting
+that as age increases, financial worth tends to rise.
+
+The adjusted R-squared value, while informative, underscored that the
+selected predictor variables only partially elucidate the variance in
+financial worth. The model, as it currently stands, does not encapsulate
+the entire spectrum of wealth accumulation dynamics.
+
+Importantly, the Linear Regression model demonstrated moderate
+predictive capability. The path forward involves exploring additional
+variables or adopting more intricate modeling techniques to enhance
+predictive accuracy.
+
+In summary, my dual-pronged approach, encompassing both the Random
+Forest and Linear Regression models, unearthed crucial insights into the
+factors influencing billionaires' financial success. While the Random
+Forest model revealed limitations in wealth category prediction, the
+Linear Regression model provided a nuanced yet incomplete understanding
+of the factors underpinning billionaires' financial prosperity.
+
+For future endeavors, I am inclined to focus on augmenting the
+predictive efficacy of the Random Forest model and delving deeper into
+the determinants of wealth. This may entail incorporating additional
+variables or harnessing more sophisticated modeling methodologies to
+enrich our understanding of billionaires' financial trajectories.
+
+# References
+
+<https://www.intechopen.com/chapters/84394>
+
+<https://www.mdpi.com/2072-4292/12/13/2071>
